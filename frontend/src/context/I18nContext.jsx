@@ -1,0 +1,22 @@
+'use client';
+import { createContext, useContext, useState, useCallback } from 'react';
+import en from '../i18n/en.json';
+import es from '../i18n/es.json';
+
+const translations = { en, es };
+
+const I18nContext = createContext({ lang: 'en', t: (k) => k, setLang: () => {} });
+
+export function I18nProvider({ children }) {
+  const [lang, setLang] = useState('en');
+  const t = useCallback((key) => translations[lang][key] || key, [lang]);
+  return (
+    <I18nContext.Provider value={{ lang, t, setLang }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useI18n() {
+  return useContext(I18nContext);
+}

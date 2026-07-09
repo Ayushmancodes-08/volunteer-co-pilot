@@ -1,0 +1,21 @@
+{
+  "name": "volunteer-co-pilot-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/app.js",
+    "start": "bun src/app.js",
+    "test": "bun test --coverage"
+  },
+  "dependencies": {
+    "fastify": "^5.2.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.0",
+    "@fastify/rate-limit": "^11.0.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "bun": "^1.2.0"
+  }
+}
