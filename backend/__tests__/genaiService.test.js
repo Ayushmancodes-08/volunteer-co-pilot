@@ -42,8 +42,8 @@ describe('parseJSONResponse', () => {
   });
 
   it('accepts response exactly at the byte limit', () => {
-    const raw = '{"gate":"A","occupancy":85}'; // 26 bytes
-    const result = genaiService.parseJSONResponse(raw, 26);
+    const raw = '{"gate":"A","occupancy":85}'; // 27 bytes
+    const result = genaiService.parseJSONResponse(raw, 27);
     expect(result.gate).toBe('A');
   });
 });
