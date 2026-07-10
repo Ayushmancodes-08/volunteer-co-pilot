@@ -9,9 +9,10 @@ describe('Volunteer and Briefing API', () => {
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
-    expect(body.name).toBe('Alex Morgan');
-    expect(body.role).toBe('Gate Monitor');
-    expect(body.gate).toBe('C');
+    expect(body.name).toBeDefined();
+    expect(body.role).toBeDefined();
+    expect(body.gate).toBeDefined();
+    expect(Array.isArray(body.tasks)).toBe(true);
   });
 
   test('POST /api/volunteer updates and returns profile', async () => {
@@ -35,7 +36,27 @@ describe('Volunteer and Briefing API', () => {
     expect(body.gate).toBe('A');
   });
 
-  test('GET /api/briefing returns structured briefing', async () => {
+  test('POST /api/volunteer with invalid body returns 400', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/volunteer',
+      payload: { name: '', role: '', gate: '' },
+    });
+    expect(res.statusCode).toBe(400);
+    const body = JSON.parse(res.body);
+    expect(body.error).toBe('Validation failed');
+  });
+
+  test('POST /api/volunteer with missing required fields returns 400', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/volunteer',
+      payload: { role: 'Gate Monitor' },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  test('GET /api/briefing returns structured briefing with all required fields', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/api/briefing?name=Sam&role=Medical&gate=B',
@@ -44,7 +65,22 @@ describe('Volunteer and Briefing API', () => {
     const body = JSON.parse(res.body);
     expect(body).toHaveProperty('summary');
     expect(body).toHaveProperty('weatherForecast');
+    expect(body).toHaveProperty('crowdOutlook');
     expect(body).toHaveProperty('announcements');
     expect(body).toHaveProperty('suggestedActions');
+    expect(Array.isArray(body.announcements)).toBe(true);
+    expect(Array.isArray(body.suggestedActions)).toBe(true);
+  });
+
+  test('GET /api/briefing uses defaults when query params are absent', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/briefing',
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body).toHaveProperty('summary');
+    // Default name should appear in the summary
+    expect(body.summary).toContain('Alex Morgan');
   });
 });

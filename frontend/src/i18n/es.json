@@ -67,5 +67,15 @@
   "profile.streak": "Racha de Días de Turno",
   "profile.duration": "Tiempo Restante del Turno",
   "profile.addTask": "Agregar Tarea",
-  "profile.taskPlaceholder": "Ej. Revisar suministros médicos..."
+  "profile.taskPlaceholder": "Ej. Revisar suministros médicos...",
+  "announcements.badge": "AVISO",
+  "crowd.chartTitle": "Perfiles de Ocupación (T-8 al Presente)",
+  "crowd.summaryTitle": "Resumen Operacional",
+  "crowd.summaryDesc": "El monitoreo en tiempo real está activo en todas las puertas. Las zonas rojas requieren alertas inmediatas y guiones de redirección multilingüe.",
+  "crowd.gateClass": "Clase de Puerta",
+  "crowd.count": "Cantidad",
+  "crowd.ok": "OK (<60%)",
+  "crowd.warning": "ADVERTENCIA (60-79%)",
+  "crowd.critical": "CRÍTICO (≥80%)",
+  "crowd.subtitle": "Lecturas de sensores de ingreso en tiempo real, actualizando cada 5s."
 }

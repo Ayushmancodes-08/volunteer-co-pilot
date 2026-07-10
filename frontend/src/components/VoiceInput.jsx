@@ -2,16 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useI18n } from '../context/I18nContext.jsx';
 import { useTranslation } from '../hooks/useTranslation.js';
-
-const LANGUAGES = [
-  { value: 'spanish', label: 'Spanish' },
-  { value: 'french', label: 'French' },
-  { value: 'hindi', label: 'Hindi' },
-  { value: 'arabic', label: 'Arabic' },
-  { value: 'german', label: 'German' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'portuguese', label: 'Portuguese' },
-];
+import { LANGUAGES } from '../utils/languages.js';
 
 export default function VoiceInput() {
   const { t } = useI18n();
@@ -44,21 +35,30 @@ export default function VoiceInput() {
       setTranscript(spoken);
       translate(spoken, targetLang, 'general_info', false);
       setListening(false);
+      recognitionRef.current = null;
     };
 
     recognition.onerror = () => {
       setListening(false);
+      recognitionRef.current = null;
     };
 
     recognition.onend = () => {
       setListening(false);
+      recognitionRef.current = null;
     };
 
+    recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
   }, [targetLang, translate]);
 
   const stopListening = useCallback(() => {
+    // Actually stop the browser Speech Recognition instance, not just the React state
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
     setListening(false);
   }, []);
 
@@ -162,7 +162,7 @@ export default function VoiceInput() {
         )}
 
         {listening && (
-          <span className="text-sm text-red-600 flex items-center gap-1" role="status">
+          <span className="text-sm text-red-600 flex items-center gap-1" role="status" aria-live="polite">
             <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse inline-block" aria-hidden="true" />
             {t('voice.listening')}
           </span>

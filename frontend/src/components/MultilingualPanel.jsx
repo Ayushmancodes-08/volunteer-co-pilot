@@ -2,16 +2,7 @@
 import { useState } from 'react';
 import { useI18n } from '../context/I18nContext.jsx';
 import { useTranslation } from '../hooks/useTranslation.js';
-
-const LANGUAGES = [
-  { value: 'spanish', label: 'Spanish' },
-  { value: 'french', label: 'French' },
-  { value: 'hindi', label: 'Hindi' },
-  { value: 'arabic', label: 'Arabic' },
-  { value: 'german', label: 'German' },
-  { value: 'japanese', label: 'Japanese' },
-  { value: 'portuguese', label: 'Portuguese' },
-];
+import { LANGUAGES } from '../utils/languages.js';
 
 const INTENTS = ['redirect', 'medical_urgency', 'general_info', 'greeting', 'emergency_evacuation'];
 
@@ -44,8 +35,11 @@ export default function MultilingualPanel() {
             placeholder={t('translate.placeholder')}
             rows={3}
             className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            aria-describedby="text-hint"
+            aria-describedby="translate-text-hint"
           />
+          <p id="translate-text-hint" className="text-xs text-slate-400 mt-1">
+            {t('translate.placeholder')}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -87,6 +81,7 @@ export default function MultilingualPanel() {
             checked={urgent}
             onChange={(e) => setUrgent(e.target.checked)}
             className="rounded border-slate-300"
+            aria-label={t('translate.urgent')}
           />
           <span className="text-sm text-slate-700">{t('translate.urgent')}</span>
         </label>

@@ -20,7 +20,7 @@ export default function Header({ activeTab, setActiveTab, volunteerName }) {
           
           {/* Logo & Subtitle */}
           <div className="flex items-center gap-3">
-            <span className="text-2xl">🏆</span>
+            <span className="text-2xl" aria-hidden="true">🏆</span>
             <div>
               <h1 className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent">
                 {t('app.title')}
@@ -44,7 +44,7 @@ export default function Header({ activeTab, setActiveTab, volunteerName }) {
                 }`}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
               >
-                <span>{tab.icon}</span>
+                <span aria-hidden="true">{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
@@ -55,7 +55,7 @@ export default function Header({ activeTab, setActiveTab, volunteerName }) {
             {/* Volunteer Profile Quickbadge */}
             {volunteerName && (
               <div className="hidden sm:flex items-center gap-2 bg-slate-800/80 border border-slate-700/50 px-3 py-1.5 rounded-full text-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
                 <span className="font-semibold text-slate-200">{volunteerName}</span>
               </div>
             )}
@@ -78,19 +78,26 @@ export default function Header({ activeTab, setActiveTab, volunteerName }) {
       </header>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50 flex justify-around py-2 px-1 shadow-2xl">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 z-50 flex justify-around py-2 px-1 shadow-2xl"
+        role="navigation"
+        aria-label="Mobile navigation"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
+            aria-label={tab.label}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
             className={`flex flex-col items-center gap-1 flex-1 py-1 rounded-xl transition-all ${
               activeTab === tab.id 
                 ? 'text-blue-400 font-bold bg-slate-800/30' 
                 : 'text-slate-400 font-medium'
             }`}
           >
-            <span className="text-lg">{tab.icon}</span>
-            <span className="text-[9px] uppercase tracking-wider scale-90">{tab.label.split(' ')[0]}</span>
+            <span className="text-lg" aria-hidden="true">{tab.icon}</span>
+            <span className="text-[9px] uppercase tracking-wider scale-90 sr-only">{tab.label}</span>
+            <span className="text-[9px] uppercase tracking-wider scale-90" aria-hidden="true">{tab.label.split(' ')[0]}</span>
           </button>
         ))}
       </nav>

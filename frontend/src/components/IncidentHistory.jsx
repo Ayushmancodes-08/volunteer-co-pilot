@@ -12,13 +12,16 @@ export default function IncidentHistory({ history }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm" role="table">
+            <caption className="sr-only">
+              {t('history.title')} — {history.length} incident{history.length !== 1 ? 's' : ''} recorded
+            </caption>
             <thead>
               <tr className="bg-slate-100">
-                <th className="text-left px-4 py-2 font-medium text-slate-600">{t('history.time')}</th>
-                <th className="text-left px-4 py-2 font-medium text-slate-600">{t('history.gate')}</th>
-                <th className="text-left px-4 py-2 font-medium text-slate-600">{t('history.action')}</th>
-                <th className="text-left px-4 py-2 font-medium text-slate-600">{t('alerts.reasoning')}</th>
-                <th className="text-left px-4 py-2 font-medium text-slate-600">{t('history.status')}</th>
+                <th scope="col" className="text-left px-4 py-2 font-medium text-slate-600">{t('history.time')}</th>
+                <th scope="col" className="text-left px-4 py-2 font-medium text-slate-600">{t('history.gate')}</th>
+                <th scope="col" className="text-left px-4 py-2 font-medium text-slate-600">{t('history.action')}</th>
+                <th scope="col" className="text-left px-4 py-2 font-medium text-slate-600">{t('alerts.reasoning')}</th>
+                <th scope="col" className="text-left px-4 py-2 font-medium text-slate-600">{t('history.status')}</th>
               </tr>
             </thead>
             <tbody>

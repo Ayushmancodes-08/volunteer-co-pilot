@@ -13,18 +13,50 @@ const PORT = parseInt(process.env.PORT, 10) || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
+/**
+ * Builds the list of allowed CORS origins from environment config.
+ * In production only CORS_ORIGIN is used. In non-production, localhost
+ * dev servers are also allowed to simplify local development.
+ *
+ * @returns {string[]}
+ */
+function buildCorsOrigins() {
+  const origins = [CORS_ORIGIN];
+  if (process.env.NODE_ENV !== 'production') {
+    origins.push('http://localhost:3000', 'http://localhost:5173');
+  }
+  return origins;
+}
+
 const app = Fastify({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   },
+  // Reject request bodies larger than 256 KB to prevent memory pressure attacks
+  bodyLimit: 256 * 1024,
 });
 
-// Security
-await app.register(helmet, { contentSecurityPolicy: false });
+// Security headers — enable CSP tailored for this SPA/API server
+await app.register(helmet, {
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      scriptSrc: ["'none'"],
+      styleSrc: ["'none'"],
+      imgSrc: ["'none'"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Not needed for a pure API server
+});
 
-// CORS - explicitly scoped, no wildcard
+// CORS - explicitly scoped, no wildcard; dev origins excluded in production
 await app.register(cors, {
-  origin: [CORS_ORIGIN, 'http://localhost:3000', 'http://localhost:5173'],
+  origin: buildCorsOrigins(),
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
 });
 

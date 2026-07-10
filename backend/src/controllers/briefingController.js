@@ -1,12 +1,40 @@
 import * as genaiService from '../services/genaiService.js';
-import * as crowdService from '../services/crowdService.js';
+import { generateCrowdData } from '../utils/crowdSimulator.js';
 
+/** Maximum character length for volunteer query parameters to prevent prompt injection. */
+const MAX_PARAM_LENGTH = 100;
+
+/**
+ * Sanitizes a string query parameter for safe embedding in GenAI prompts.
+ * Trims whitespace, enforces max length, and strips characters that could
+ * be used to inject instructions into a prompt (angle brackets, quotes, newlines).
+ *
+ * @param {string} value - Raw query parameter value.
+ * @param {string} fallback - Default value if the param is empty after trimming.
+ * @param {number} [maxLen=MAX_PARAM_LENGTH] - Maximum allowed length.
+ * @returns {string} Sanitized value safe for prompt interpolation.
+ */
+function sanitizeParam(value, fallback, maxLen = MAX_PARAM_LENGTH) {
+  if (!value || typeof value !== 'string') return fallback;
+  // Strip characters that could be used for prompt injection
+  const cleaned = value.replace(/[<>"'\n\r\\{}[\]]/g, '').trim().slice(0, maxLen);
+  return cleaned.length > 0 ? cleaned : fallback;
+}
+
+/**
+ * Generates an AI-powered shift briefing for a volunteer.
+ * Falls back to a structured static briefing when GenAI is unavailable.
+ *
+ * @param {import('fastify').FastifyRequest} request
+ * @param {import('fastify').FastifyReply} reply
+ */
 async function getBriefing(request, reply) {
-  const name = request.query.name || 'Alex Morgan';
-  const role = request.query.role || 'Gate Monitor';
-  const gate = request.query.gate || 'C';
+  const name = sanitizeParam(request.query.name, 'Alex Morgan');
+  const role = sanitizeParam(request.query.role, 'Gate Monitor');
+  const gate = sanitizeParam(request.query.gate, 'C', 5);
 
-  const allGates = crowdService.getCrowdData();
+  // Use generateCrowdData directly — pure read with no history side-effects
+  const allGates = generateCrowdData();
   const criticalGates = allGates.filter(g => g.occupancy >= 80).map(g => g.gate);
 
   const prompt = `You are a FIFA World Cup 2026 stadium operations coordinator. Generate a shift briefing for a volunteer.
@@ -43,8 +71,8 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact shape:
     const parsed = genaiService.parseJSONResponse(raw);
     return reply.send(parsed);
   } catch (err) {
-    request.log.error(err, 'Briefing GenAI call failed, returning fallback briefing');
-    
+    request.log.error({ msg: 'Briefing GenAI call failed, returning fallback briefing', gate });
+
     // Structured mock briefing fallback
     const fallback = {
       summary: `Welcome to your shift, ${name}! As a ${role} assigned to Gate ${gate}, your primary objective is ensuring a smooth, safe flow for fans. Keep an eye on adjacent gate levels to help reroute crowds if needed.`,

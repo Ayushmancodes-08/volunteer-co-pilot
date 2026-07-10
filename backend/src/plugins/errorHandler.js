@@ -1,3 +1,12 @@
+/**
+ * Global Fastify error handler.
+ * Normalizes Zod validation errors (400), rate limit errors (429),
+ * and all other unexpected errors (500) into a consistent JSON envelope.
+ *
+ * @param {Error & {name?: string, statusCode?: number, errors?: Array}} error
+ * @param {import('fastify').FastifyRequest} request
+ * @param {import('fastify').FastifyReply} reply
+ */
 function errorHandler(error, request, reply) {
   // Zod validation errors
   if (error.name === 'ZodError') {

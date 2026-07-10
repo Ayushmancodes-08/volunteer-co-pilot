@@ -67,5 +67,15 @@
   "profile.streak": "Shift Day Streak",
   "profile.duration": "Remaining Shift Time",
   "profile.addTask": "Add Task",
-  "profile.taskPlaceholder": "E.g., Check first aid supplies..."
+  "profile.taskPlaceholder": "E.g., Check first aid supplies...",
+  "announcements.badge": "NOTICE",
+  "crowd.chartTitle": "Occupancy Profiles (T-8 to Present)",
+  "crowd.summaryTitle": "Operational Summary",
+  "crowd.summaryDesc": "Real-time monitoring is active across all gates. Red zones require immediate supervisor alerts and multilingual redirection scripts.",
+  "crowd.gateClass": "Gate Class",
+  "crowd.count": "Count",
+  "crowd.ok": "OK (<60%)",
+  "crowd.warning": "WARNING (60-79%)",
+  "crowd.critical": "CRITICAL (≥80%)",
+  "crowd.subtitle": "Real-time gate ingress sensor readings updating every 5s."
 }

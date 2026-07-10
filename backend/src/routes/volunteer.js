@@ -1,6 +1,12 @@
 import { getProfile, updateProfile } from '../controllers/volunteerController.js';
 
-async function volunteerRoutes(fastify, options) {
+/**
+ * Registers volunteer profile routes.
+ *
+ * @param {import('fastify').FastifyInstance} fastify
+ * @param {object} opts
+ */
+async function volunteerRoutes(fastify, opts) {
   fastify.get('/api/volunteer', getProfile);
   fastify.post('/api/volunteer', updateProfile);
 }

@@ -1,6 +1,12 @@
 import * as genaiService from '../services/genaiService.js';
 import { translateRequestSchema } from '../validators/index.js';
 
+/**
+ * Pre-built fallback translations for all 7 supported languages × 5 intents.
+ * Used when the GenAI translation service is unavailable.
+ *
+ * @type {Record<string, Record<string, {translatedText: string, phonetic: string}>>}
+ */
 const MOCK_TRANSLATIONS = {
   spanish: {
     redirect: { translatedText: "Por favor, diríjase a otra puerta.", phonetic: "Por fah-vor, dee-ree-hah-se ah oh-trah pwer-tah" },
@@ -53,6 +59,14 @@ const MOCK_TRANSLATIONS = {
   }
 };
 
+/**
+ * Handles translation requests from volunteers.
+ * Attempts AI-powered contextual translation via GenAI, with fallback to the
+ * pre-built MOCK_TRANSLATIONS dictionary for offline / rate-limit scenarios.
+ *
+ * @param {import('fastify').FastifyRequest} request
+ * @param {import('fastify').FastifyReply} reply
+ */
 async function translateText(request, reply) {
   const parsed = translateRequestSchema.parse(request.body);
 
@@ -65,21 +79,24 @@ async function translateText(request, reply) {
     );
     return reply.send(result);
   } catch (err) {
-    request.log.error(err, 'Translation GenAI failed, using fallback translation dictionary');
-    
+    request.log.error(
+      { msg: 'Translation GenAI failed, using fallback dictionary', lang: parsed.targetLanguage }
+    );
+
     const lang = parsed.targetLanguage.toLowerCase();
     const intent = parsed.intent;
-    
-    let fallbackResult = null;
-    if (MOCK_TRANSLATIONS[lang] && MOCK_TRANSLATIONS[lang][intent]) {
+
+    let fallbackResult;
+    if (MOCK_TRANSLATIONS[lang]?.[intent]) {
       fallbackResult = MOCK_TRANSLATIONS[lang][intent];
     } else {
+      // Ultimate safety net: wrap original text with language label
       fallbackResult = {
         translatedText: `[${parsed.targetLanguage}] ${parsed.text}`,
         phonetic: `[Pronunciation guide for ${parsed.targetLanguage}]: ${parsed.text}`
       };
     }
-    
+
     return reply.send(fallbackResult);
   }
 }

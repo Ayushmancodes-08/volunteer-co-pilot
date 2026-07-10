@@ -6,6 +6,33 @@ const PROVIDERS = {
   GEMINI: 'gemini',
 };
 
+/**
+ * Produces a compact, fixed-length cache key from a translation request tuple.
+ * Uses a simple djb2-style hash of the concatenated key components so that
+ * long user-supplied text strings do not bloat the Map's key memory.
+ *
+ * @param {string} text
+ * @param {string} targetLanguage
+ * @param {string} intent
+ * @param {boolean} urgent
+ * @returns {string} Hex-encoded 32-bit hash prefixed with a namespace tag.
+ */
+function buildTranslateCacheKey(text, targetLanguage, intent, urgent) {
+  const raw = `${text}:${targetLanguage}:${intent}:${urgent}`;
+  let hash = 5381;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash) ^ raw.charCodeAt(i);
+    hash >>>= 0; // keep unsigned 32-bit
+  }
+  return `translate:${hash.toString(16)}`;
+}
+
+/**
+ * Resolves the active GenAI provider from the GENAI_PROVIDER environment variable.
+ * Defaults to 'gemini' if unset or unrecognized.
+ *
+ * @returns {'gemini' | 'openai' | 'anthropic'}
+ */
 function getProvider() {
   const env = process.env.GENAI_PROVIDER || 'gemini';
   if (env === PROVIDERS.OPENAI) return PROVIDERS.OPENAI;
@@ -13,6 +40,14 @@ function getProvider() {
   return PROVIDERS.GEMINI;
 }
 
+/**
+ * Builds the reasoning prompt for crowd alert evaluation.
+ *
+ * @param {string} gate - Gate identifier (e.g. 'C').
+ * @param {number} occupancy - Current occupancy percentage.
+ * @param {Array<{gate: string, occupancy: number}>} allGates - All gate data.
+ * @returns {string} Formatted prompt string.
+ */
 function buildReasoningPrompt(gate, occupancy, allGates) {
   const gateSummary = allGates.map((g) => `${g.gate}: ${g.occupancy}%`).join(', ');
   return `You are a FIFA World Cup 2026 crowd management assistant. A stadium volunteer needs an immediate action.
@@ -29,6 +64,15 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact shape:
 }`;
 }
 
+/**
+ * Builds the translation prompt for multilingual fan communication.
+ *
+ * @param {string} text - The source text to translate.
+ * @param {string} targetLanguage - Target language name (e.g. 'spanish').
+ * @param {string} intent - Communication intent key (e.g. 'redirect').
+ * @param {boolean} urgent - Whether the message should use an urgent tone.
+ * @returns {string} Formatted prompt string.
+ */
 function buildTranslationPrompt(text, targetLanguage, intent, urgent) {
   const tone = urgent ? 'URGENT and direct' : 'calm and helpful';
   const intentGuide = {
@@ -50,6 +94,13 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact shape:
 }`;
 }
 
+/**
+ * Calls the Gemini API with the given prompt.
+ *
+ * @param {string} prompt - The prompt to send.
+ * @returns {Promise<string>} Raw text response from the model.
+ * @throws {Error} When the API key is missing or the request fails.
+ */
 async function callGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
@@ -80,6 +131,13 @@ async function callGemini(prompt) {
   return text;
 }
 
+/**
+ * Calls the OpenAI Chat Completions API with the given prompt.
+ *
+ * @param {string} prompt - The prompt to send.
+ * @returns {Promise<string>} Raw text response from the model.
+ * @throws {Error} When the API key is missing or the request fails.
+ */
 async function callOpenAI(prompt) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
@@ -108,6 +166,13 @@ async function callOpenAI(prompt) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+/**
+ * Calls the Anthropic Messages API with the given prompt.
+ *
+ * @param {string} prompt - The prompt to send.
+ * @returns {Promise<string>} Raw text response from the model.
+ * @throws {Error} When the API key is missing or the request fails.
+ */
 async function callAnthropic(prompt) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
@@ -137,6 +202,12 @@ async function callAnthropic(prompt) {
   return data.content?.[0]?.text || '';
 }
 
+/**
+ * Routes a prompt to the configured GenAI provider and returns the raw text response.
+ *
+ * @param {string} prompt - The prompt to send.
+ * @returns {Promise<string>} Raw model response text.
+ */
 async function callGenAI(prompt) {
   const provider = getProvider();
 
@@ -150,22 +221,58 @@ async function callGenAI(prompt) {
   }
 }
 
-function parseJSONResponse(raw) {
+/**
+ * Strips optional markdown code fences from a raw LLM response and parses it as JSON.
+ * Rejects responses exceeding a safe size threshold to prevent memory exhaustion
+ * from unexpectedly large model outputs.
+ *
+ * @param {string} raw - Raw string from the LLM response.
+ * @param {number} [maxBytes=8192] - Maximum allowed byte length of the cleaned string.
+ * @returns {object} Parsed JSON object.
+ * @throws {SyntaxError} If the cleaned string is not valid JSON.
+ * @throws {Error} If the response exceeds the maximum allowed size.
+ */
+function parseJSONResponse(raw, maxBytes = 8192) {
   let cleaned = raw.trim();
   if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
   if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
-  return JSON.parse(cleaned.trim());
+  cleaned = cleaned.trim();
+
+  if (cleaned.length > maxBytes) {
+    throw new Error(`GenAI response exceeded maximum allowed size (${cleaned.length} > ${maxBytes} bytes)`);
+  }
+
+  return JSON.parse(cleaned);
 }
 
+/**
+ * Requests an AI-generated crowd alert recommendation for a specific gate.
+ *
+ * @param {string} gate - Gate identifier.
+ * @param {number} occupancy - Current occupancy percentage.
+ * @param {Array<{gate: string, occupancy: number}>} allGates - All gate data.
+ * @returns {Promise<{gate: string, occupancy: number, action: string, reasoning: string}>}
+ */
 async function getAlertRecommendation(gate, occupancy, allGates) {
   const prompt = buildReasoningPrompt(gate, occupancy, allGates);
   const raw = await callGenAI(prompt);
   return parseJSONResponse(raw);
 }
 
+/**
+ * Translates a message to the target language using GenAI.
+ * Results are cached by a hashed (text + language + intent + urgent) key for 5 minutes.
+ * Using a hash keeps cache key memory constant regardless of input text length.
+ *
+ * @param {string} text - Source text to translate.
+ * @param {string} targetLanguage - Target language name.
+ * @param {string} [intent='general_info'] - Communication intent key.
+ * @param {boolean} [urgent=false] - Whether to use an urgent tone.
+ * @returns {Promise<{translatedText: string, phonetic: string}>}
+ */
 async function translateText(text, targetLanguage, intent = 'general_info', urgent = false) {
-  const cacheKey = `translate:${text}:${targetLanguage}:${intent}:${urgent}`;
+  const cacheKey = buildTranslateCacheKey(text, targetLanguage, intent, urgent);
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
@@ -184,4 +291,5 @@ export {
   parseJSONResponse,
   buildReasoningPrompt,
   buildTranslationPrompt,
+  buildTranslateCacheKey,
 };

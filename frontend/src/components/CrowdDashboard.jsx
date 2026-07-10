@@ -34,7 +34,7 @@ export default function CrowdDashboard({ gates, evaluating }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">{t('crowd.title')}</h2>
-          <p className="text-sm text-slate-500">Real-time gate ingress sensor readings updating every 5s.</p>
+          <p className="text-sm text-slate-500">{t('crowd.subtitle')}</p>
         </div>
         {evaluating && (
           <span className="text-sm font-semibold text-slate-500 flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200/50">
@@ -52,7 +52,7 @@ export default function CrowdDashboard({ gates, evaluating }) {
         
         {/* Real-time Trend Analytics (Recharts Line Chart) */}
         <div className="lg:col-span-2 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Occupancy Profiles (T-8 to Present)</h3>
+          <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">{t('crowd.chartTitle')}</h3>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: 5 }}>
@@ -89,27 +89,27 @@ export default function CrowdDashboard({ gates, evaluating }) {
         {/* Live Gate Status Overview */}
         <div className="lg:col-span-1 bg-white/80 backdrop-blur-md border border-slate-200/60 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Operational Summary</h3>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{t('crowd.summaryTitle')}</h3>
             <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-              Real-time monitoring is active across all gates. Red zones require immediate supervisor alerts and multilingual redirection scripts.
+              {t('crowd.summaryDesc')}
             </p>
           </div>
           
           <div className="space-y-3">
             <div className="flex justify-between items-center text-xs font-semibold text-slate-500 border-b border-slate-100 pb-2">
-              <span>Gate Class</span>
-              <span>Count</span>
+              <span>{t('crowd.gateClass')}</span>
+              <span>{t('crowd.count')}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>OK (&lt;60%)</span>
+              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>{t('crowd.ok')}</span>
               <span className="font-bold text-slate-700">{gates.filter(g => g.occupancy < 60).length}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>WARNING (60-79%)</span>
+              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>{t('crowd.warning')}</span>
               <span className="font-bold text-slate-700">{gates.filter(g => g.occupancy >= 60 && g.occupancy < 80).length}</span>
             </div>
             <div className="flex justify-between items-center text-sm">
-              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>CRITICAL (&ge;80%)</span>
+              <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>{t('crowd.critical')}</span>
               <span className="font-bold text-slate-700">{gates.filter(g => g.occupancy >= 80).length}</span>
             </div>
           </div>
