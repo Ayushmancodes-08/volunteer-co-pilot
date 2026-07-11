@@ -1,16 +1,18 @@
 'use client';
+import { useMemo } from 'react';
 import { useI18n } from '../context/I18nContext.jsx';
 
 export default function Header({ activeTab, setActiveTab, volunteerName }) {
   const { t, lang, setLang } = useI18n();
-  const tabs = [
+  const tabs = useMemo(() => [
     { id: 'briefing', label: t('nav.briefing'), icon: '📋' },
     { id: 'dashboard', label: t('nav.dashboard'), icon: '📊' },
     { id: 'alerts', label: t('nav.alerts'), icon: '🚨' },
     { id: 'translate', label: t('nav.translate'), icon: '🗣️' },
     { id: 'history', label: t('nav.history'), icon: '📜' },
     { id: 'profile', label: t('nav.profile'), icon: '👤' },
-  ];
+  ], [t]);
+
 
   return (
     <>
