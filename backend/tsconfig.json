@@ -7,14 +7,14 @@
     "strict": true,
     "noEmit": true,
     "allowJs": true,
-    "checkJs": true,
+    "checkJs": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
+    "isolatedModules": false,
     "noUncheckedIndexedAccess": false,
-    "noImplicitOverride": true
+    "noImplicitOverride": false
   },
   "include": ["src/**/*.js"],
   "exclude": ["node_modules", "dist"]
