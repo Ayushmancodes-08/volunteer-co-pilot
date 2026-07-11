@@ -224,7 +224,7 @@ export default function VolunteerProfile({ profile, onUpdate, loading }) {
                     : 'bg-white border-slate-200/50 text-slate-700 shadow-sm hover:border-slate-300'
                 }`}
               >
-                <div className="flex items-center gap-3 flex-1">
+                <label className="flex items-center gap-3 flex-1 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={task.completed}
@@ -232,8 +232,8 @@ export default function VolunteerProfile({ profile, onUpdate, loading }) {
                     aria-label={`${task.completed ? 'Mark incomplete' : 'Mark complete'}: ${task.text}`}
                     className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
                   />
-                  <span className="text-sm font-medium cursor-pointer" onClick={() => toggleTask(task.id)}>{task.text}</span>
-                </div>
+                  <span className="text-sm font-medium">{task.text}</span>
+                </label>
                 <button
                   onClick={() => deleteTask(task.id)}
                   className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 transition-all"

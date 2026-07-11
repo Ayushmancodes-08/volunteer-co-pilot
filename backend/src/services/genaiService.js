@@ -6,6 +6,42 @@ const PROVIDERS = {
   GEMINI: 'gemini',
 };
 
+/** Maximum number of retry attempts for transient API errors. */
+const MAX_RETRIES = 2;
+
+/**
+ * Retries an async function with exponential backoff on failure.
+ * Only retries on transient errors (5xx or network failures). Does not retry
+ * on client errors (4xx) since those indicate bad input, not transient failures.
+ * In test environments (NODE_ENV=test), the backoff delay is 0 to prevent timeouts.
+ *
+ * @template T
+ * @param {() => Promise<T>} fn - Async function to retry.
+ * @param {number} [maxRetries=MAX_RETRIES] - Max retry attempts after the first failure.
+ * @returns {Promise<T>}
+ */
+async function retryWithBackoff(fn, maxRetries = MAX_RETRIES) {
+  /** Base delay in ms — 0 in test environments to prevent test timeouts. */
+  const BASE_DELAY_MS = process.env.NODE_ENV === 'test' ? 0 : 200;
+  let lastErr;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      // Don't retry on the last attempt, or on non-retryable errors
+      if (attempt === maxRetries) break;
+      const isRetryable = !err.message || !err.message.includes('(4');
+      if (!isRetryable) break;
+      // Exponential backoff: 200ms, 400ms, 800ms... (0 in test env)
+      if (BASE_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, BASE_DELAY_MS * 2 ** attempt));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * Produces a compact, fixed-length cache key from a translation request tuple.
  * Uses a simple djb2-style hash of the concatenated key components so that
@@ -106,29 +142,30 @@ async function callGemini(prompt) {
   if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
   const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: 300,
-          temperature: 0.3,
-        },
-      }),
+  return retryWithBackoff(async () => {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            maxOutputTokens: 300,
+            temperature: 0.3,
+          },
+        }),
+      }
+    );
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`Gemini API error (${resp.status}): ${err}`);
     }
-  );
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Gemini API error (${resp.status}): ${err}`);
-  }
-
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return text;
+    const data = await resp.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  });
 }
 
 /**
@@ -143,27 +180,29 @@ async function callOpenAI(prompt) {
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 300,
-      temperature: 0.3,
-    }),
+  return retryWithBackoff(async () => {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`OpenAI API error (${resp.status}): ${err}`);
+    }
+
+    const data = await resp.json();
+    return data.choices?.[0]?.message?.content ?? '';
   });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`OpenAI API error (${resp.status}): ${err}`);
-  }
-
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content || '';
 }
 
 /**
@@ -178,28 +217,30 @@ async function callAnthropic(prompt) {
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
   const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 300,
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  return retryWithBackoff(async () => {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 300,
+        temperature: 0.3,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      throw new Error(`Anthropic API error (${resp.status}): ${err}`);
+    }
+
+    const data = await resp.json();
+    return data.content?.[0]?.text ?? '';
   });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`Anthropic API error (${resp.status}): ${err}`);
-  }
-
-  const data = await resp.json();
-  return data.content?.[0]?.text || '';
 }
 
 /**
@@ -292,4 +333,6 @@ export {
   buildReasoningPrompt,
   buildTranslationPrompt,
   buildTranslateCacheKey,
+  retryWithBackoff,
+  MAX_RETRIES,
 };

@@ -123,3 +123,15 @@ describe('cacheService — sweepExpired()', () => {
     expect(cache.size()).toBe(0);
   });
 });
+
+describe('cacheService — exported constants', () => {
+  it('DEFAULT_TTL is a positive number', () => {
+    expect(typeof cache.DEFAULT_TTL).toBe('number');
+    expect(cache.DEFAULT_TTL).toBeGreaterThan(0);
+  });
+
+  it('SWEEP_INTERVAL_MS equals half of DEFAULT_TTL in ms', () => {
+    expect(cache.SWEEP_INTERVAL_MS).toBe((cache.DEFAULT_TTL * 1000) / 2);
+  });
+});
+

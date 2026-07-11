@@ -1,4 +1,3 @@
-import * as crowdService from '../services/crowdService.js';
 import * as genaiService from '../services/genaiService.js';
 import { alertTriggerSchema } from '../validators/index.js';
 import { generateCrowdData } from '../utils/crowdSimulator.js';
@@ -8,6 +7,32 @@ const MAX_ALERT_HISTORY = 100;
 
 /** In-memory alert log. Bounded at MAX_ALERT_HISTORY entries (newest first). */
 const alertHistory = [];
+
+/**
+ * Generates a unique alert ID. Prefers crypto.randomUUID() for collision resistance;
+ * falls back to a timestamp-based ID for environments that don't support it.
+ *
+ * @returns {string}
+ */
+function generateAlertId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `alert-${crypto.randomUUID()}`;
+  }
+  return `alert-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+/**
+ * Prepends an alert entry to the in-memory history log.
+ * Enforces the MAX_ALERT_HISTORY cap to prevent unbounded memory growth.
+ *
+ * @param {{ id: string, gate: string, occupancy: number, action: string, reasoning: string, timestamp: string, dismissed: boolean }} entry
+ */
+function addAlert(entry) {
+  alertHistory.unshift(entry);
+  if (alertHistory.length > MAX_ALERT_HISTORY) {
+    alertHistory.splice(MAX_ALERT_HISTORY);
+  }
+}
 
 /**
  * Evaluates a gate's crowd density and returns an AI-generated action recommendation.
@@ -31,24 +56,18 @@ async function evaluateAlert(request, reply) {
     );
 
     const alertEntry = {
-      id: `alert-${Date.now()}`,
+      id: generateAlertId(),
       ...recommendation,
       timestamp: new Date().toISOString(),
       dismissed: false,
     };
 
-    alertHistory.unshift(alertEntry);
-
-    // Prevent unbounded memory growth
-    if (alertHistory.length > MAX_ALERT_HISTORY) {
-      alertHistory.splice(MAX_ALERT_HISTORY);
-    }
-
+    addAlert(alertEntry);
     return reply.send(alertEntry);
   } catch (err) {
-    request.log.error({ msg: 'GenAI alert evaluation failed', gate: parsed.gate }, err.message);
+    request.log.error({ msg: 'GenAI alert evaluation failed', gate: parsed.gate, error: err.message });
     const fallback = {
-      id: `alert-${Date.now()}`,
+      id: generateAlertId(),
       gate: parsed.gate,
       occupancy: parsed.occupancy,
       action: 'Direct fans away from this gate',
@@ -57,11 +76,7 @@ async function evaluateAlert(request, reply) {
       dismissed: false,
     };
 
-    alertHistory.unshift(fallback);
-    if (alertHistory.length > MAX_ALERT_HISTORY) {
-      alertHistory.splice(MAX_ALERT_HISTORY);
-    }
-
+    addAlert(fallback);
     return reply.send(fallback);
   }
 }

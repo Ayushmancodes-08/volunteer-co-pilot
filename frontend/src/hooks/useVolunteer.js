@@ -8,7 +8,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
  * All fetch calls use AbortController to cancel in-flight requests on unmount,
  * preventing setState calls on unmounted components.
  *
- * @returns {{ profile: object|null, loading: boolean, error: string|null, updateProfile: Function, refetch: Function }}
+ * @returns {{ profile: {name: string, role: string, gate: string, tasks: Array<{id: string, text: string, completed: boolean}>} | null, loading: boolean, error: string | null, updateProfile: (newProfile: object) => Promise<void>, refetch: () => Promise<void> }}
  */
 export function useVolunteer() {
   const [profile, setProfile] = useState(null);
@@ -29,7 +29,7 @@ export function useVolunteer() {
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Failed to fetch volunteer profile:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       }
     } finally {
       if (!controller.signal.aborted) {
@@ -57,7 +57,7 @@ export function useVolunteer() {
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Failed to update volunteer profile:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       }
     } finally {
       if (!controller.signal.aborted) {

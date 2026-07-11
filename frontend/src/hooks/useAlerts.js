@@ -9,8 +9,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
  *   the same gate+occupancy pair is never sent twice simultaneously.
  * - dismissAlert: fires a PATCH and removes from active list.
  * All fetch calls use an AbortController that is cancelled on unmount.
- *
- * @returns {{ activeAlerts: Array, history: Array, evaluateGate: Function, dismissAlert: Function, evaluating: boolean }}
  */
 export function useAlerts() {
   const [activeAlerts, setActiveAlerts] = useState([]);
@@ -24,6 +22,33 @@ export function useAlerts() {
     return () => {
       abortControllers.current.forEach((c) => c.abort());
     };
+  }, []);
+
+  // Load alert history on mount to preserve state across page reloads
+  useEffect(() => {
+    const controller = new AbortController();
+    abortControllers.current.push(controller);
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API_BASE}/api/alerts/history`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const allAlerts = data.alerts || [];
+        setHistory(allAlerts);
+        setActiveAlerts(allAlerts.filter((a) => !a.dismissed));
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Failed to fetch alert history on mount:', err);
+        }
+      } finally {
+        abortControllers.current = abortControllers.current.filter((c) => c !== controller);
+      }
+    }
+
+    loadHistory();
   }, []);
 
   const evaluateGate = useCallback(async (gate, occupancy) => {
@@ -55,7 +80,6 @@ export function useAlerts() {
         console.error('Alert evaluation failed:', err);
       }
     } finally {
-      // Clean up this controller from the live list
       abortControllers.current = abortControllers.current.filter((c) => c !== controller);
       setEvaluating(false);
       pendingRef.current.delete(key);

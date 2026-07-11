@@ -4,13 +4,17 @@ import { useI18n } from '../context/I18nContext.jsx';
 
 function GateCard({ gate, occupancy, history = [] }) {
   const { t } = useI18n();
-  let status, bgClass, badgeClass, icon, strokeColor;
+  let status;
+  let bgClass;
+  let badgeClass;
+  let icon;
+  let strokeColor;
 
   if (occupancy >= 80) {
     status = t('crowd.status.red');
     bgClass = 'bg-red-50/80 backdrop-blur-sm border-red-500/40 shadow-red-100/50';
     badgeClass = 'bg-red-600 text-white';
-    strokeColor = '#dc2626'; // red-600
+    strokeColor = '#dc2626';
     icon = (
       <svg className="w-5 h-5 text-red-600 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -20,7 +24,7 @@ function GateCard({ gate, occupancy, history = [] }) {
     status = t('crowd.status.yellow');
     bgClass = 'bg-yellow-50/80 backdrop-blur-sm border-yellow-500/40 shadow-yellow-100/50';
     badgeClass = 'bg-yellow-600 text-white';
-    strokeColor = '#ca8a04'; // yellow-600
+    strokeColor = '#ca8a04';
     icon = (
       <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -30,7 +34,7 @@ function GateCard({ gate, occupancy, history = [] }) {
     status = t('crowd.status.green');
     bgClass = 'bg-slate-50/80 backdrop-blur-sm border-slate-200/60 shadow-slate-100/50';
     badgeClass = 'bg-emerald-600 text-white';
-    strokeColor = '#10b981'; // emerald-500
+    strokeColor = '#10b981';
     icon = (
       <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -38,15 +42,14 @@ function GateCard({ gate, occupancy, history = [] }) {
     );
   }
 
-  // Generate sparkline SVG path coordinates from history
   const sparklinePath = history && history.length > 1
     ? (() => {
         const min = Math.min(...history);
         const max = Math.max(...history);
         const range = max - min === 0 ? 1 : max - min;
         const points = history.map((val, idx) => {
-          const x = (idx / (history.length - 1)) * 60; // 60px wide
-          const y = 16 - ((val - min) / range) * 12 - 2; // 16px high with 2px padding
+          const x = (idx / (history.length - 1)) * 60;
+          const y = 16 - ((val - min) / range) * 12 - 2;
           return `${x},${y}`;
         });
         return `M ${points.join(' L ')}`;
@@ -64,12 +67,11 @@ function GateCard({ gate, occupancy, history = [] }) {
         <h3 className="text-lg font-bold text-slate-800">Gate {gate}</h3>
         {icon}
       </div>
-      
+
       <div className="flex items-end justify-between mb-3">
         <div className="text-3xl font-extrabold text-slate-900 tracking-tight" aria-hidden="true">
           {occupancy}%
         </div>
-        {/* Tiny trend sparkline */}
         {sparklinePath && (
           <div className="flex flex-col items-end gap-0.5">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trend (8m)</span>

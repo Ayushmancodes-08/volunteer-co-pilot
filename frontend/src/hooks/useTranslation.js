@@ -8,7 +8,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
  * Uses AbortController so a previous in-flight request is cancelled when a new
  * translation is triggered before the first one completes.
  *
- * @returns {{ result: object|null, loading: boolean, error: string|null, translate: Function, clearResult: Function }}
+ * @returns {{ result: {translatedText: string, phonetic: string} | null, loading: boolean, error: string | null, translate: (text: string, targetLanguage: string, intent: string, urgent: boolean) => Promise<void>, clearResult: () => void }}
  */
 export function useTranslation() {
   const [result, setResult] = useState(null);
@@ -16,8 +16,12 @@ export function useTranslation() {
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
-  const translate = useCallback(async (text, targetLanguage, intent, urgent) => {
-    // Cancel previous in-flight translation request
+  const translate = useCallback(async (
+    text,
+    targetLanguage,
+    intent,
+    urgent
+  ) => {
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -36,7 +40,7 @@ export function useTranslation() {
       setResult(data);
     } catch (err) {
       if (err.name !== 'AbortError') {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
         setResult(null);
       }
     } finally {

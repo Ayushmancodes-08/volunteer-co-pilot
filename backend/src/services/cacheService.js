@@ -97,4 +97,4 @@ function size() {
   return cache.size;
 }
 
-export { get, set, clear, size, sweepExpired, MAX_CACHE_SIZE };
+export { get, set, clear, size, sweepExpired, MAX_CACHE_SIZE, DEFAULT_TTL, SWEEP_INTERVAL_MS };

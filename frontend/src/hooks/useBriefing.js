@@ -8,7 +8,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
  * Uses AbortController to cancel in-flight requests when a new briefing
  * is fetched before the previous one completes, and on component unmount.
  *
- * @returns {{ briefing: object|null, loading: boolean, error: string|null, fetchBriefing: Function }}
+ * @returns {{ briefing: {summary: string, weatherForecast: string, crowdOutlook: string, suggestedActions: string[], announcements: string[]} | null, loading: boolean, error: string | null, fetchBriefing: (name: string, role: string, gate: string) => Promise<void> }}
  */
 export function useBriefing() {
   const [briefing, setBriefing] = useState(null);
@@ -17,7 +17,6 @@ export function useBriefing() {
   const abortRef = useRef(null);
 
   const fetchBriefing = useCallback(async (name, role, gate) => {
-    // Cancel any previous in-flight briefing request
     if (abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -33,7 +32,7 @@ export function useBriefing() {
     } catch (err) {
       if (err.name !== 'AbortError') {
         console.error('Failed to fetch AI briefing:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Unknown error');
       }
     } finally {
       if (!controller.signal.aborted) {

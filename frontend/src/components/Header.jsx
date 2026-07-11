@@ -62,7 +62,6 @@ export default function Header({ activeTab, setActiveTab, volunteerName }) {
 
             {/* Language Switcher */}
             <div className="flex items-center gap-1">
-              <label htmlFor="lang-toggle" className="sr-only">{t('language.en')} / {t('language.es')}</label>
               <button
                 id="lang-toggle"
                 onClick={() => setLang(lang === 'en' ? 'es' : 'en')}

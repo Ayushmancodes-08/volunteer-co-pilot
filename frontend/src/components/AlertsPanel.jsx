@@ -24,7 +24,7 @@ export default function AlertsPanel({ alerts, onDismiss }) {
           <p className="text-sm font-medium text-slate-400">{t('alerts.noAlerts')}</p>
         </div>
       ) : (
-        <ul className="space-y-4" role="list">
+        <ul className="space-y-4">
           {sortedAlerts.map((alert) => (
             <li
               key={alert.id}

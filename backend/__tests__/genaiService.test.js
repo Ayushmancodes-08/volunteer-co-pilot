@@ -304,3 +304,53 @@ describe('GenAI Providers with mock fetch', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1); // Still 1
   });
 });
+
+describe('retryWithBackoff', () => {
+  it('succeeds on first attempt without retrying', async () => {
+    let callCount = 0;
+    const fn = async () => {
+      callCount++;
+      return 'success';
+    };
+    const result = await genaiService.retryWithBackoff(fn, 2);
+    expect(result).toBe('success');
+    expect(callCount).toBe(1);
+  });
+
+  it('retries on failure and succeeds on the second attempt', async () => {
+    let callCount = 0;
+    const fn = async () => {
+      callCount++;
+      if (callCount < 2) throw new Error('transient error');
+      return 'recovered';
+    };
+    const result = await genaiService.retryWithBackoff(fn, 2);
+    expect(result).toBe('recovered');
+    expect(callCount).toBe(2);
+  });
+
+  it('throws after exhausting all retries', async () => {
+    let callCount = 0;
+    const fn = async () => {
+      callCount++;
+      throw new Error('persistent failure');
+    };
+    await expect(genaiService.retryWithBackoff(fn, 2)).rejects.toThrow('persistent failure');
+    expect(callCount).toBe(3); // 1 initial + 2 retries
+  });
+
+  it('does not retry on 4xx client errors', async () => {
+    let callCount = 0;
+    const fn = async () => {
+      callCount++;
+      throw new Error('API error (400): Bad Request');
+    };
+    await expect(genaiService.retryWithBackoff(fn, 2)).rejects.toThrow('400');
+    // Should stop retrying immediately since error message contains '4'
+    expect(callCount).toBeLessThanOrEqual(2);
+  });
+
+  it('MAX_RETRIES constant is exported and equals 2', () => {
+    expect(genaiService.MAX_RETRIES).toBe(2);
+  });
+});

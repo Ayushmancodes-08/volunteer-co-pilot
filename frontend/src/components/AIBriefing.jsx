@@ -71,7 +71,7 @@ export default function AIBriefing({ briefing, loading, onFetch, volunteer }) {
                 <span className="text-slate-400 text-xs">Live Update</span>
               </div>
               <p className="text-lg font-medium leading-relaxed mb-4 text-slate-100">
-                "{briefing.summary}"
+                &quot;{briefing.summary}&quot;
               </p>
               <div className="flex items-center gap-2 text-sm text-slate-300 border-t border-white/10 pt-4">
                 <span>Active Assignment:</span>

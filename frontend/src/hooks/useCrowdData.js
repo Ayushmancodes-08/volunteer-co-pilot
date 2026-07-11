@@ -11,7 +11,7 @@ const POLL_INTERVAL = 5000;
  * Each fetch uses an AbortController so in-flight requests are cancelled on
  * unmount or when a new fetch supersedes the previous one.
  *
- * @returns {{ gates: Array, timestamp: string|null, loading: boolean }}
+ * @returns {{ gates: Array<{gate: string, occupancy: number, history: number[], timestamp: string}>, timestamp: string | null, loading: boolean }}
  */
 export function useCrowdData() {
   const [gates, setGates] = useState([]);
@@ -21,7 +21,6 @@ export function useCrowdData() {
   const abortRef = useRef(null);
 
   const fetchData = useCallback(async () => {
-    // Cancel any in-flight request before starting a new one
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -43,11 +42,11 @@ export function useCrowdData() {
         setLoading(false);
       }
     }
-  }, []);
+  }, [setGates, setTimestamp, setLoading]);
 
   const startPolling = useCallback(() => {
     if (intervalRef.current) return;
-    intervalRef.current = setInterval(fetchData, POLL_INTERVAL);
+    intervalRef.current = setInterval(() => { void fetchData(); }, POLL_INTERVAL);
   }, [fetchData]);
 
   const stopPolling = useCallback(() => {
@@ -61,7 +60,6 @@ export function useCrowdData() {
     fetchData();
     startPolling();
 
-    // Pause polling when the tab is hidden to avoid unnecessary network traffic
     const handleVisibilityChange = () => {
       if (document.hidden) {
         stopPolling();
@@ -75,7 +73,6 @@ export function useCrowdData() {
 
     return () => {
       stopPolling();
-      // Cancel any in-flight request on unmount
       if (abortRef.current) abortRef.current.abort();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
