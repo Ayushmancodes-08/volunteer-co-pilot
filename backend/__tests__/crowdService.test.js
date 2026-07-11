@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
+
 import * as crowdService from '../src/services/crowdService.js';
-import * as cacheService from '../src/services/cacheService.js';
 
 describe('recordOccupancy', () => {
   beforeEach(() => {

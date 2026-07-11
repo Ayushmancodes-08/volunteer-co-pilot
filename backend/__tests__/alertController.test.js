@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, spyOn } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
+
 import * as crowdService from '../src/services/crowdService.js';
 
 describe('checkThresholds', () => {
