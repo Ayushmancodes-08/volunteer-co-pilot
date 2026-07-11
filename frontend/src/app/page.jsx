@@ -16,11 +16,12 @@ import { useBriefing } from '../hooks/useBriefing.js';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState('briefing');
-  const { gates, timestamp, loading: crowdLoading } = useCrowdData();
+  const { gates, loading: crowdLoading } = useCrowdData();
   const { activeAlerts, history, evaluateGate, dismissAlert, evaluating } = useAlerts();
   const { profile, loading: profileLoading, updateProfile } = useVolunteer();
   const { briefing, loading: briefingLoading, fetchBriefing } = useBriefing();
   const prevGatesRef = useRef({});
+
 
   // Check thresholds every time gate data updates
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function HomePage() {
     dismissAlert(id);
   }, [dismissAlert]);
 
-  const renderTab = () => {
+  const renderTab = useCallback(() => {
     switch (activeTab) {
       case 'briefing':
         return (
@@ -81,7 +82,8 @@ export default function HomePage() {
       default:
         return null;
     }
-  };
+  }, [activeTab, briefing, briefingLoading, fetchBriefing, profile, gates, evaluating, activeAlerts, handleDismiss, history, updateProfile, profileLoading]);
+
 
   const currentLoading = crowdLoading || profileLoading;
 
