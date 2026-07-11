@@ -28,11 +28,16 @@ async function retryWithBackoff(fn, maxRetries = MAX_RETRIES) {
     try {
       return await fn();
     } catch (err) {
-      lastErr = err;
+      const errorObject = err instanceof Error ? err : new Error(String(err));
+      lastErr = errorObject;
       // Don't retry on the last attempt, or on non-retryable errors
-      if (attempt === maxRetries) break;
-      const isRetryable = !err.message || !err.message.includes('(4');
-      if (!isRetryable) break;
+      if (attempt === maxRetries) {
+        break;
+      }
+      const isRetryable = !errorObject.message.includes('(4');
+      if (!isRetryable) {
+        break;
+      }
       // Exponential backoff: 200ms, 400ms, 800ms... (0 in test env)
       if (BASE_DELAY_MS > 0) {
         await new Promise((resolve) => setTimeout(resolve, BASE_DELAY_MS * 2 ** attempt));
@@ -71,8 +76,8 @@ function buildTranslateCacheKey(text, targetLanguage, intent, urgent) {
  */
 function getProvider() {
   const env = process.env.GENAI_PROVIDER || 'gemini';
-  if (env === PROVIDERS.OPENAI) return PROVIDERS.OPENAI;
-  if (env === PROVIDERS.ANTHROPIC) return PROVIDERS.ANTHROPIC;
+  if (env === PROVIDERS.OPENAI) {return PROVIDERS.OPENAI;}
+  if (env === PROVIDERS.ANTHROPIC) {return PROVIDERS.ANTHROPIC;}
   return PROVIDERS.GEMINI;
 }
 
@@ -139,7 +144,7 @@ Respond with ONLY valid JSON (no markdown, no code fences) in this exact shape:
  */
 async function callGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
+  if (!apiKey) {throw new Error('GEMINI_API_KEY not configured');}
   const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
   return retryWithBackoff(async () => {
@@ -177,7 +182,7 @@ async function callGemini(prompt) {
  */
 async function callOpenAI(prompt) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
+  if (!apiKey) {throw new Error('OPENAI_API_KEY not configured');}
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
   return retryWithBackoff(async () => {
@@ -214,7 +219,7 @@ async function callOpenAI(prompt) {
  */
 async function callAnthropic(prompt) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+  if (!apiKey) {throw new Error('ANTHROPIC_API_KEY not configured');}
   const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
 
   return retryWithBackoff(async () => {
@@ -275,9 +280,9 @@ async function callGenAI(prompt) {
  */
 function parseJSONResponse(raw, maxBytes = 8192) {
   let cleaned = raw.trim();
-  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
-  if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
-  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
+  if (cleaned.startsWith('```json')) {cleaned = cleaned.slice(7);}
+  if (cleaned.startsWith('```')) {cleaned = cleaned.slice(3);}
+  if (cleaned.endsWith('```')) {cleaned = cleaned.slice(0, -3);}
   cleaned = cleaned.trim();
 
   if (cleaned.length > maxBytes) {
@@ -315,7 +320,7 @@ async function getAlertRecommendation(gate, occupancy, allGates) {
 async function translateText(text, targetLanguage, intent = 'general_info', urgent = false) {
   const cacheKey = buildTranslateCacheKey(text, targetLanguage, intent, urgent);
   const cached = cache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) {return cached;}
 
   const prompt = buildTranslationPrompt(text, targetLanguage, intent, urgent);
   const raw = await callGenAI(prompt);

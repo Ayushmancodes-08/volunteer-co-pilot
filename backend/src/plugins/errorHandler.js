@@ -8,7 +8,7 @@
  * @param {import('fastify').FastifyReply} reply
  */
 function errorHandler(error, request, reply) {
-  // Zod validation errors
+  // Zod validation errors or Fastify validation errors
   if (error.name === 'ZodError') {
     return reply.status(400).send({
       error: 'Validation failed',
@@ -18,6 +18,18 @@ function errorHandler(error, request, reply) {
       })),
     });
   }
+
+  // Fastify native schema validation errors
+  if (error.statusCode === 400 && error.validation) {
+    return reply.status(400).send({
+      error: 'Validation failed',
+      details: error.validation.map((e) => ({
+        path: e.instancePath.replace(/^\//, '').replace(/\//g, '.'),
+        message: e.message,
+      })),
+    });
+  }
+
 
   // Fastify rate limit errors
   if (error.statusCode === 429) {
