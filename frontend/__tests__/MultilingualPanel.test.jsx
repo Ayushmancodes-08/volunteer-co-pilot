@@ -1,13 +1,13 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { render, screen, fireEvent } from '@testing-library/react';
-import MultilingualPanel from '../src/components/MultilingualPanel.jsx';
-import { I18nProvider } from '../src/context/I18nContext.jsx';
+import MultilingualPanel from '../src/components/MultilingualPanel';
+import { I18nProvider } from '../src/context/I18nContext';
 
 // Mock the useTranslation hook to avoid real API calls in tests
 const mockTranslate = mock(() => {});
 const mockClearResult = mock(() => {});
 
-mock.module('../src/hooks/useTranslation.js', () => ({
+mock.module('../src/hooks/useTranslation', () => ({
   useTranslation: () => ({
     result: null,
     loading: false,
@@ -77,5 +77,20 @@ describe('MultilingualPanel', () => {
     renderWithI18n(<MultilingualPanel />);
     const section = screen.getByRole('region', { hidden: true });
     expect(section).toBeTruthy();
+  });
+
+  it('handles form submission and calls translate', () => {
+    renderWithI18n(<MultilingualPanel />);
+    const textarea = document.getElementById('translate-text');
+    const form = document.querySelector('form');
+    
+    // Test empty submit (should return early)
+    fireEvent.submit(form);
+    expect(mockTranslate).not.toHaveBeenCalled();
+    
+    // Test valid submit
+    fireEvent.change(textarea, { target: { value: 'Hello' } });
+    fireEvent.submit(form);
+    expect(mockTranslate).toHaveBeenCalledWith('Hello', 'spanish', 'general_info', false);
   });
 });

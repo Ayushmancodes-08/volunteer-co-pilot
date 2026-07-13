@@ -1,5 +1,5 @@
 import { describe, it, expect, mock } from 'bun:test';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import VolunteerProfile from '../src/components/VolunteerProfile.jsx';
 import { I18nProvider } from '../src/context/I18nContext.jsx';
 
@@ -136,5 +136,40 @@ describe('VolunteerProfile', () => {
     );
     const saveBtn = screen.getByRole('button', { name: /\.\.\./i });
     expect(saveBtn.disabled).toBe(true);
+  });
+
+  it('updates the shift duration countdown', () => {
+    const originalSetInterval = globalThis.setInterval;
+    const originalClearInterval = globalThis.clearInterval;
+    
+    let tick;
+    globalThis.setInterval = (cb) => {
+      tick = cb;
+      return 123;
+    };
+    globalThis.clearInterval = mock(() => {});
+    
+    renderWithI18n(<VolunteerProfile profile={mockProfile} onUpdate={mock(() => {})} loading={false} />);
+    
+    // Initial render
+    expect(screen.getByText('07:59:59')).toBeTruthy();
+    
+    // Tick a few times
+    act(() => { tick(); tick(); });
+    expect(screen.getByText('07:59:57')).toBeTruthy();
+    
+    // Fast forward to exhaust the timer to 00:00:00 to cover hour/min/sec decrements
+    act(() => {
+      // 8 hours = 28800 seconds, minus the 2 we just ticked = 28798
+      for(let i=0; i<28798; i++) {
+        tick();
+      }
+    });
+    
+    expect(screen.getByText('00:00:00')).toBeTruthy();
+    expect(globalThis.clearInterval).toHaveBeenCalledWith(123);
+    
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
   });
 });
