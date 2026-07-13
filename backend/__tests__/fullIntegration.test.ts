@@ -1,14 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
-import alertRoutes from '../src/routes/alerts.js';
-import briefingRoutes from '../src/routes/briefing.js';
-import translateRoutes from '../src/routes/translate.js';
-import crowdRoutes from '../src/routes/crowd.js';
-import volunteerRoutes from '../src/routes/volunteer.js';
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
+import Fastify from 'fastify';
+
 import errorHandlerPlugin from '../src/plugins/errorHandler.js';
 import rateLimiterPlugin from '../src/plugins/rateLimiter.js';
+import alertRoutes from '../src/routes/alerts.js';
+import briefingRoutes from '../src/routes/briefing.js';
+import crowdRoutes from '../src/routes/crowd.js';
+import translateRoutes from '../src/routes/translate.js';
+import volunteerRoutes from '../src/routes/volunteer.js';
 
 let app: any;
 const originalFetch = global.fetch;
@@ -75,7 +76,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   global.fetch = originalFetch;
-  if (app) await app.close();
+  if (app) {await app.close();}
 });
 
 // ─── POST /api/translate ──────────────────────────────────────────────────────
