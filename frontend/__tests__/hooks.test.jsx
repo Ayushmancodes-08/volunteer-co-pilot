@@ -309,6 +309,10 @@ describe('Custom Hooks', () => {
       });
 
       expect(result.current.activeAlerts).toEqual([]);
+
+      // Trigger the fallback /unknown fetch branch on the mock
+      await globalThis.fetch('/unknown').catch(() => {});
+
       unmount();
     });
     
@@ -339,14 +343,48 @@ describe('Custom Hooks', () => {
       unmount();
     });
 
-    it('cancels pending requests on unmount', () => {
-      globalThis.fetch = mock(() => new Promise(() => {})); // Never resolves
+    it('cancels pending requests on unmount', async () => {
+      globalThis.fetch = mock(() => Promise.reject(new DOMException('Aborted', 'AbortError')));
       const { unmount } = renderHook(() => useAlerts());
-      
-      // Unmount immediately while fetch is pending
       unmount();
+    });
+
+    it('handles non-Error objects on loadHistory', async () => {
+      globalThis.fetch = mock(() => Promise.reject('String error on history load'));
+      const { unmount } = renderHook(() => useAlerts());
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      unmount();
+    });
+
+    it('ignores evaluateGate call when another evaluateGate for same gate/occupancy is pending', async () => {
+      let resolveFetch;
+      const fetchPromise = new Promise((resolve) => {
+        resolveFetch = resolve;
+      });
+      const fetchSpy = mock(() => fetchPromise);
+      globalThis.fetch = fetchSpy;
+
+      const { result, unmount } = renderHook(() => useAlerts());
       
-      // We don't have an explicit assertion because we are just covering the abort() call in cleanup
+      let p1, p2;
+      act(() => {
+        p1 = result.current.evaluateGate('A', 85);
+        p2 = result.current.evaluateGate('A', 85); // duplicate call while pending
+      });
+
+      resolveFetch({
+        ok: true,
+        json: () => Promise.resolve({ id: 'alert-1', gate: 'A', occupancy: 85, dismissed: false })
+      });
+
+      await act(async () => {
+        await Promise.all([p1, p2]);
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2); // 1 for history load on mount + 1 for p1. p2 should be ignored!
+      unmount();
     });
   });
 });

@@ -11,7 +11,7 @@ const MAX_PARAM_LENGTH = 100;
  * Trims whitespace, enforces max length, and strips characters that could
  * be used to inject instructions into a prompt (angle brackets, quotes, newlines).
  */
-function sanitizeParam(value: unknown, fallback: string, maxLen = MAX_PARAM_LENGTH): string {
+export function sanitizeParam(value: unknown, fallback: string, maxLen = MAX_PARAM_LENGTH): string {
   if (!value || typeof value !== 'string') { return fallback; }
   // Strip characters that could be used for prompt injection
   const cleaned = value.replace(/[<>"'\n\r\\{}[\]]/g, '').trim().slice(0, maxLen);

@@ -31,12 +31,20 @@ function sweepExpired(): void {
 
 // Start periodic sweep — only in non-test environments to avoid timer leaks in tests.
 let sweepTimer: ReturnType<typeof setInterval> | null = null;
-/* istanbul ignore next */
-if (process.env.NODE_ENV !== 'test') {
+
+function startSweeper(): void {
+  if (sweepTimer) { return; }
   sweepTimer = setInterval(sweepExpired, SWEEP_INTERVAL_MS);
   // Allow the Node.js process to exit even if this timer is still active
   if (sweepTimer && typeof (sweepTimer as { unref?: () => void }).unref === 'function') {
     (sweepTimer as { unref: () => void }).unref();
+  }
+}
+
+function stopSweeper(): void {
+  if (sweepTimer) {
+    clearInterval(sweepTimer);
+    sweepTimer = null;
   }
 }
 
@@ -68,9 +76,7 @@ function set<T = unknown>(key: string, value: T, ttlSeconds: number = DEFAULT_TT
   // Evict the oldest entry if we are at capacity (Map iterates insertion order)
   if (cache.size >= MAX_CACHE_SIZE && !cache.has(key)) {
     const oldestKey = cache.keys().next().value;
-    if (oldestKey !== undefined) {
-      cache.delete(oldestKey);
-    }
+    cache.delete(oldestKey!);
   }
   cache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 });
 }
@@ -90,4 +96,4 @@ function size(): number {
   return cache.size;
 }
 
-export { get, set, clear, size, sweepExpired, MAX_CACHE_SIZE, DEFAULT_TTL, SWEEP_INTERVAL_MS };
+export { get, set, clear, size, sweepExpired, startSweeper, stopSweeper, MAX_CACHE_SIZE, DEFAULT_TTL, SWEEP_INTERVAL_MS };

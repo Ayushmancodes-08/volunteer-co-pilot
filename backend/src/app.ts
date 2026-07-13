@@ -9,9 +9,6 @@ import briefingRoutes from './routes/briefing';
 import crowdRoutes from './routes/crowd';
 import translateRoutes from './routes/translate';
 import volunteerRoutes from './routes/volunteer';
-
-const PORT: number = parseInt(process.env.PORT || '4000', 10);
-const HOST: string = process.env.HOST || '0.0.0.0';
 const CORS_ORIGIN: string = process.env.CORS_ORIGIN || 'http://localhost:3000';
 
 /**

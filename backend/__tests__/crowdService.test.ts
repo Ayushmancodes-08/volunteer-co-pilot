@@ -95,3 +95,17 @@ describe('checkThresholds', () => {
   });
 });
 
+describe('recordOccupancy history limit', () => {
+  it('caps history entries at 50 and shifts out old entries', () => {
+    const gateId = 'TEST_LIMIT_GATE';
+    for (let i = 0; i < 55; i++) {
+      crowdService.recordOccupancy(gateId, i);
+    }
+    const history = crowdService.getOccupancyHistory(gateId);
+    expect(history).toHaveLength(50);
+    // The first 5 entries (0, 1, 2, 3, 4) should have been shifted out
+    expect(history[0].occupancy).toBe(5);
+    expect(history[49].occupancy).toBe(54);
+  });
+});
+

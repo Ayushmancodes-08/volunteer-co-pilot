@@ -1,24 +1,30 @@
-import { describe, it, expect, mock, afterEach } from 'bun:test';
+process.env.NODE_ENV = 'production';
+
+import { describe, it, expect, mock, afterEach, afterAll } from 'bun:test';
 
 import * as genaiService from '../src/services/genaiService';
 
+afterAll(() => {
+  process.env.NODE_ENV = 'test';
+});
+
 describe('parseJSONResponse', () => {
   it('parses clean JSON', () => {
-    const result = genaiService.parseJSONResponse('{"gate":"A","occupancy":85}');
+    const result = genaiService.parseJSONResponse('{"gate":"A","occupancy":85}') as any;
     expect(result.gate).toBe('A');
     expect(result.occupancy).toBe(85);
   });
 
   it('strips markdown code fences', () => {
     const raw = '```json\n{"gate":"B","occupancy":90}\n```';
-    const result = genaiService.parseJSONResponse(raw);
+    const result = genaiService.parseJSONResponse(raw) as any;
     expect(result.gate).toBe('B');
     expect(result.occupancy).toBe(90);
   });
 
   it('strips plain triple-backtick fences', () => {
     const raw = '```\n{"gate":"C","occupancy":70}\n```';
-    const result = genaiService.parseJSONResponse(raw);
+    const result = genaiService.parseJSONResponse(raw) as any;
     expect(result.gate).toBe('C');
   });
 
@@ -27,7 +33,7 @@ describe('parseJSONResponse', () => {
   });
 
   it('handles leading/trailing whitespace around valid JSON', () => {
-    const result = genaiService.parseJSONResponse('   {"gate":"D","occupancy":55}   ');
+    const result = genaiService.parseJSONResponse('   {"gate":"D","occupancy":55}   ') as any;
     expect(result.gate).toBe('D');
     expect(result.occupancy).toBe(55);
   });
@@ -44,7 +50,7 @@ describe('parseJSONResponse', () => {
 
   it('accepts response exactly at the byte limit', () => {
     const raw = '{"gate":"A","occupancy":85}'; // 27 bytes
-    const result = genaiService.parseJSONResponse(raw, 27);
+    const result = genaiService.parseJSONResponse(raw, 27) as any;
     expect(result.gate).toBe('A');
   });
 });
@@ -203,7 +209,7 @@ describe('GenAI Providers with mock fetch', () => {
       json: () => Promise.resolve({
         candidates: [{ content: { parts: [{ text: 'Gemini Response' }] } }]
       })
-    }));
+    })) as any;
 
     const result = await genaiService.callGenAI('test prompt');
     expect(result).toBe('Gemini Response');
@@ -216,7 +222,7 @@ describe('GenAI Providers with mock fetch', () => {
       ok: false,
       status: 400,
       text: () => Promise.resolve('Invalid request payload')
-    }));
+    })) as any;
 
     await expect(genaiService.callGenAI('test prompt')).rejects.toThrow(
       'Gemini API error (400): Invalid request payload'
@@ -231,7 +237,7 @@ describe('GenAI Providers with mock fetch', () => {
       json: () => Promise.resolve({
         choices: [{ message: { content: 'OpenAI Response' } }]
       })
-    }));
+    })) as any;
 
     const result = await genaiService.callGenAI('test prompt');
     expect(result).toBe('OpenAI Response');
@@ -244,7 +250,7 @@ describe('GenAI Providers with mock fetch', () => {
       ok: false,
       status: 401,
       text: () => Promise.resolve('Unauthorized')
-    }));
+    })) as any;
 
     await expect(genaiService.callGenAI('test prompt')).rejects.toThrow(
       'OpenAI API error (401): Unauthorized'
@@ -259,7 +265,7 @@ describe('GenAI Providers with mock fetch', () => {
       json: () => Promise.resolve({
         content: [{ text: 'Anthropic Response' }]
       })
-    }));
+    })) as any;
 
     const result = await genaiService.callGenAI('test prompt');
     expect(result).toBe('Anthropic Response');
@@ -272,7 +278,7 @@ describe('GenAI Providers with mock fetch', () => {
       ok: false,
       status: 429,
       text: () => Promise.resolve('Rate Limit Exceeded')
-    }));
+    })) as any;
 
     await expect(genaiService.callGenAI('test prompt')).rejects.toThrow(
       'Anthropic API error (429): Rate Limit Exceeded'
@@ -292,15 +298,14 @@ describe('GenAI Providers with mock fetch', () => {
         candidates: [{ content: { parts: [{ text: '{"translatedText":"Hola","phonetic":"oh-lah"}' }] } }]
       })
     }));
-    global.fetch = fetchSpy;
-
     // First call: calls fetch
-    const res1 = await genaiService.translateText('Hello', 'spanish');
+    global.fetch = fetchSpy as any;
+    const res1 = await genaiService.translateText('Hello', 'spanish') as any;
     expect(res1.translatedText).toBe('Hola');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // Second call: retrieves from cache
-    const res2 = await genaiService.translateText('Hello', 'spanish');
+    const res2 = await genaiService.translateText('Hello', 'spanish') as any;
     expect(res2.translatedText).toBe('Hola');
     expect(fetchSpy).toHaveBeenCalledTimes(1); // Still 1
   });
@@ -353,5 +358,37 @@ describe('retryWithBackoff', () => {
 
   it('MAX_RETRIES constant is exported and equals 2', () => {
     expect(genaiService.MAX_RETRIES).toBe(2);
+  });
+
+  it('handles non-Error objects in retryWithBackoff', async () => {
+    let callCount = 0;
+    const fn = async () => {
+      callCount++;
+      throw 'string error';
+    };
+    await expect(genaiService.retryWithBackoff(fn, 1)).rejects.toThrow('string error');
+    expect(callCount).toBe(2);
+  });
+});
+
+describe('Gemini API edge cases', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('returns empty string when Gemini candidates content is empty', async () => {
+    process.env.GEMINI_API_KEY = 'mock-key';
+    process.env.GENAI_PROVIDER = 'gemini';
+    global.fetch = mock(() => Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({
+        candidates: []
+      })
+    })) as any;
+
+    const result = await genaiService.callGenAI('test prompt');
+    expect(result).toBe('');
   });
 });

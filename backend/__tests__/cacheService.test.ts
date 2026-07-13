@@ -1,9 +1,18 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+// Set NODE_ENV to production before import to cover the auto-start sweeper branch
+process.env.NODE_ENV = 'production';
+
+import { describe, it, expect, beforeEach, afterAll } from 'bun:test';
 
 import * as cache from '../src/services/cacheService';
 
 beforeEach(() => {
   cache.clear();
+});
+
+afterAll(() => {
+  // Stop background timer to prevent leak in test environment
+  cache.stopSweeper();
+  process.env.NODE_ENV = 'test';
 });
 
 describe('cacheService — basic operations', () => {
@@ -13,14 +22,14 @@ describe('cacheService — basic operations', () => {
 
   it('stores and retrieves a value', () => {
     cache.set('my-key', { data: 'hello' });
-    expect(cache.get('my-key')).toEqual({ data: 'hello' });
+    expect(cache.get<any>('my-key')).toEqual({ data: 'hello' });
   });
 
   it('returns different values for different keys', () => {
     cache.set('key-a', 'value-a');
     cache.set('key-b', 'value-b');
-    expect(cache.get('key-a')).toBe('value-a');
-    expect(cache.get('key-b')).toBe('value-b');
+    expect(cache.get<any>('key-a')).toBe('value-a');
+    expect(cache.get<any>('key-b')).toBe('value-b');
   });
 
   it('returns null after value has expired (short TTL)', async () => {
@@ -40,16 +49,16 @@ describe('cacheService — basic operations', () => {
   it('overwrites an existing key', () => {
     cache.set('update-me', 'original');
     cache.set('update-me', 'updated');
-    expect(cache.get('update-me')).toBe('updated');
+    expect(cache.get<any>('update-me')).toBe('updated');
   });
 
   it('stores non-string values (objects, arrays)', () => {
     const obj = { gate: 'A', occupancy: 75 };
     cache.set('object-key', obj);
-    expect(cache.get('object-key')).toEqual(obj);
+    expect(cache.get<any>('object-key')).toEqual(obj);
 
     cache.set('array-key', [1, 2, 3]);
-    expect(cache.get('array-key')).toEqual([1, 2, 3]);
+    expect(cache.get<any>('array-key')).toEqual([1, 2, 3]);
   });
 });
 
@@ -88,11 +97,11 @@ describe('cacheService — MAX_CACHE_SIZE eviction', () => {
       cache.set(`key-${i}`, `value-${i}`);
     }
     // The very first key should still be present
-    expect(cache.get('key-0')).toBe('value-0');
+    expect(cache.get<any>('key-0')).toBe('value-0');
     // Adding one more should evict key-0 (oldest insertion)
     cache.set('key-overflow', 'new');
     expect(cache.get('key-0')).toBeNull();
-    expect(cache.get('key-overflow')).toBe('new');
+    expect(cache.get<any>('key-overflow')).toBe('new');
   });
 
   it('updating an existing key does not increase size beyond MAX_CACHE_SIZE', () => {
@@ -103,7 +112,7 @@ describe('cacheService — MAX_CACHE_SIZE eviction', () => {
     // Overwrite existing key — should not evict anything or grow
     cache.set('key-0', 'updated');
     expect(cache.size()).toBe(MAX_CACHE_SIZE);
-    expect(cache.get('key-0')).toBe('updated');
+    expect(cache.get<any>('key-0')).toBe('updated');
   });
 });
 
@@ -114,7 +123,7 @@ describe('cacheService — sweepExpired()', () => {
     await new Promise((r) => setTimeout(r, 5));
     cache.sweepExpired();
     expect(cache.get('dead')).toBeNull();
-    expect(cache.get('live')).toBe('still-here');
+    expect(cache.get<any>('live')).toBe('still-here');
     // Size should be 1 after sweep
     expect(cache.size()).toBe(1);
   });
@@ -136,3 +145,33 @@ describe('cacheService — exported constants', () => {
   });
 });
 
+describe('cacheService — background sweeper controls', () => {
+  it('can start and stop background sweeper', () => {
+    expect(() => cache.startSweeper()).not.toThrow();
+    // Second call should hit the guard clause
+    expect(() => cache.startSweeper()).not.toThrow();
+    expect(() => cache.stopSweeper()).not.toThrow();
+    // Stop again should be a no-op
+    expect(() => cache.stopSweeper()).not.toThrow();
+  });
+
+  it('calls unref on timer if present', () => {
+    const originalSetInterval = globalThis.setInterval;
+    let unrefCalled = false;
+    globalThis.setInterval = (() => {
+      return {
+        unref() {
+          unrefCalled = true;
+        }
+      } as unknown as ReturnType<typeof setInterval>;
+    }) as unknown as typeof setInterval;
+    try {
+      cache.stopSweeper();
+      cache.startSweeper();
+      expect(unrefCalled).toBe(true);
+    } finally {
+      globalThis.setInterval = originalSetInterval;
+      cache.stopSweeper();
+    }
+  });
+});

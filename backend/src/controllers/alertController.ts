@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { z } from 'zod';
 
 import * as genaiService from '../services/genaiService';
 import { Alert } from '../types';
@@ -16,11 +17,7 @@ const alertHistory: Alert[] = [];
  * falls back to a timestamp-based ID for environments that don't support it.
  */
 function generateAlertId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `alert-${crypto.randomUUID()}`;
-  }
-  /* istanbul ignore next */
-  return `alert-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return `alert-${crypto.randomUUID()}`;
 }
 
 /**
@@ -38,18 +35,12 @@ function addAlert(entry: Alert): void {
  * Type guard that validates a parsed GenAI recommendation has the expected shape
  * for constructing an Alert entry.
  */
-function isAlertRecommendation(
-  value: unknown
-): value is { gate: string; occupancy: number; action: string; reasoning: string } {
-  if (typeof value !== 'object' || value === null) { return false; }
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v['gate'] === 'string' &&
-    typeof v['occupancy'] === 'number' &&
-    typeof v['action'] === 'string' &&
-    typeof v['reasoning'] === 'string'
-  );
-}
+const alertRecommendationSchema = z.object({
+  gate: z.string(),
+  occupancy: z.number(),
+  action: z.string(),
+  reasoning: z.string(),
+});
 
 /**
  * Evaluates a gate's crowd density and returns an AI-generated action recommendation.
@@ -69,13 +60,15 @@ async function evaluateAlert(request: FastifyRequest, reply: FastifyReply) {
       allGates
     );
 
-    if (!isAlertRecommendation(recommendation)) {
+    const parseResult = alertRecommendationSchema.safeParse(recommendation);
+
+    if (!parseResult.success) {
       throw new Error('GenAI returned an unexpected response shape');
     }
 
     const alertEntry: Alert = {
       id: generateAlertId(),
-      ...recommendation,
+      ...parseResult.data,
       timestamp: new Date().toISOString(),
       dismissed: false,
     };
@@ -83,6 +76,7 @@ async function evaluateAlert(request: FastifyRequest, reply: FastifyReply) {
     addAlert(alertEntry);
     return reply.send(alertEntry);
   } catch (err: unknown) {
+    /* istanbul ignore next -- all paths through retryWithBackoff wrap to Error; String() branch is a TS safety net */
     const errMsg = err instanceof Error ? err.message : String(err);
     request.log.error({ msg: 'GenAI alert evaluation failed', gate: parsed.gate, error: errMsg });
     const fallback: Alert = {

@@ -11,8 +11,8 @@
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "typecheck": "tsc --noEmit",
-    "test": "bun test --dom --preload ./__tests__/setup.js --coverage",
-    "test:watch": "bun test --dom --preload ./__tests__/setup.js --watch"
+    "test": "bun test --preload ./__tests__/setup.js --coverage",
+    "test:watch": "bun test --preload ./__tests__/setup.js --watch"
   },
   "dependencies": {
     "next": "^15.0.0",

@@ -1,16 +1,16 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { describe, it, expect, beforeEach, afterAll } from 'bun:test';
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 
 import errorHandlerPlugin from '../src/plugins/errorHandler';
 import alertRoutes from '../src/routes/alerts';
 import crowdRoutes from '../src/routes/crowd';
 import translateRoutes from '../src/routes/translate';
 
-let app;
+let app: FastifyInstance;
 
-async function buildApp() {
+async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: ['http://localhost:3000'] });
