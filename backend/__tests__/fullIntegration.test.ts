@@ -1,7 +1,7 @@
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
-import Fastify from 'fastify';
+import Fastify, { FastifyInstance } from 'fastify';
 
 import errorHandlerPlugin from '../src/plugins/errorHandler.js';
 import rateLimiterPlugin from '../src/plugins/rateLimiter.js';
@@ -11,7 +11,7 @@ import crowdRoutes from '../src/routes/crowd.js';
 import translateRoutes from '../src/routes/translate.js';
 import volunteerRoutes from '../src/routes/volunteer.js';
 
-let app: any;
+let app: FastifyInstance;
 const originalFetch = global.fetch;
 
 async function buildApp() {
@@ -71,7 +71,7 @@ beforeEach(async () => {
       });
     }
     throw new Error('Unexpected fetch call to ' + url);
-  }) as any;
+  }) as unknown as typeof fetch;
 });
 
 afterEach(async () => {
@@ -230,7 +230,7 @@ describe('GET /api/crowd', () => {
   it('each gate has occupancy and history array', async () => {
     const res = await app.inject({ method: 'GET', url: '/api/crowd' });
     const body = JSON.parse(res.body);
-    body.gates.forEach((gate: any) => {
+    body.gates.forEach((gate: { occupancy: number; history: number[] }) => {
       expect(typeof gate.occupancy).toBe('number');
       expect(gate.occupancy).toBeGreaterThanOrEqual(0);
       expect(gate.occupancy).toBeLessThanOrEqual(100);
@@ -379,7 +379,7 @@ describe('Additional Edge Cases', () => {
     // Bypass validation to inject an unsupported language
     validators.translateRequestSchema.parse = () => ({
       text: 'Safety test',
-      targetLanguage: 'klingon' as any,
+      targetLanguage: 'klingon' as unknown as 'spanish',
       intent: 'greeting',
       urgent: false
     });
@@ -405,7 +405,7 @@ describe('Additional Edge Cases', () => {
       ok: false,
       status: 500,
       text: () => Promise.resolve('Mocked error')
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       for (let i = 0; i < 105; i++) {
@@ -434,7 +434,7 @@ describe('Additional Edge Cases', () => {
       ok: false,
       status: 500,
       text: () => Promise.resolve('Mocked error')
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       const res = await app.inject({

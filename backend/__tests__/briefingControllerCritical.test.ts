@@ -47,7 +47,7 @@ describe('briefingController — criticalGates path (>= 80% occupancy)', () => {
     // Force GenAI to fail → fallback briefing
     global.fetch = mock(() =>
       Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('fail') })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     const res = await app.inject({

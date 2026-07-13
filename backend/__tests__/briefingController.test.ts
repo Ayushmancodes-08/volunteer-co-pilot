@@ -32,7 +32,7 @@ describe('GET /api/briefing — fallback path', () => {
         status: 503,
         text: () => Promise.resolve('Service Unavailable'),
       })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     const res = await app.inject({
@@ -58,7 +58,7 @@ describe('GET /api/briefing — fallback path', () => {
         status: 503,
         text: () => Promise.resolve('Service Unavailable'),
       })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     const res = await app.inject({
@@ -73,7 +73,7 @@ describe('GET /api/briefing — fallback path', () => {
   it('uses default name when query param is missing', async () => {
     global.fetch = mock(() =>
       Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('fail') })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     const res = await app.inject({ method: 'GET', url: '/api/briefing' });
@@ -85,7 +85,7 @@ describe('GET /api/briefing — fallback path', () => {
   it('strips prompt injection characters from name param', async () => {
     global.fetch = mock(() =>
       Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('fail') })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     // Inject characters that should be stripped
@@ -103,7 +103,7 @@ describe('GET /api/briefing — fallback path', () => {
   it('falls back to default name when param contains only strippable injection chars', async () => {
     global.fetch = mock(() =>
       Promise.resolve({ ok: false, status: 503, text: () => Promise.resolve('fail') })
-    ) as any;
+    ) as unknown as typeof fetch;
 
     const app = await buildApp();
     // A name that is ONLY injection characters — after stripping, cleaned.length === 0
@@ -143,7 +143,7 @@ describe('GET /api/briefing — successful GenAI path', () => {
             ],
           }),
       })
-    ) as any;
+    ) as unknown as typeof fetch;
     process.env.GEMINI_API_KEY = 'mock-key';
     process.env.GENAI_PROVIDER = 'gemini';
 

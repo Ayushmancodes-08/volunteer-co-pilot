@@ -35,7 +35,7 @@ describe('alertController Edge Cases', () => {
     global.fetch = mock(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve(null),
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       const res = await app.inject({
@@ -56,7 +56,7 @@ describe('alertController Edge Cases', () => {
     global.fetch = mock(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve('not-an-object'),
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       const res = await app.inject({
@@ -95,7 +95,7 @@ describe('alertController Edge Cases', () => {
     global.fetch = mock(() => Promise.resolve({
       ok: true,
       json: () => Promise.resolve({}),
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       const res = await app.inject({
@@ -134,7 +134,7 @@ describe('alertController Edge Cases', () => {
       ok: false,
       status: 503,
       text: () => Promise.resolve('unavailable'),
-    })) as any;
+    })) as unknown as typeof fetch;
 
     try {
       const res = await app.inject({
